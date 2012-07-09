@@ -21,39 +21,13 @@
  ******************************************************************************/
 package br.eti.rslemos.podoscopista;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import objectexplorer.ObjectGraphMeasurer.Footprint;
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+public @interface Datapoint {
 
-public class Chart {
-
-	public String className;
-	public List<Method> methods;
-	
-	public Chart(String name, int expectedMethodCount) {
-		className = name;
-		methods = new ArrayList<Chart.Method>(expectedMethodCount);
-	}
-	
-	class Method {
-		public String name;
-		public String description;
-		public List<Invocation> invocations;
-		
-		public Method(String name, String description, int expectedInvocationCount) {
-			this.name = name;
-			this.description = description;
-			this.invocations = new ArrayList<Chart.Invocation>(expectedInvocationCount);
-			
-			Chart.this.methods.add(this);
-		}
-	}
-	
-	static class Invocation {
-		public Object[] parameters;
-		
-		public long size;
-		public Footprint footprint;
-	}
 }

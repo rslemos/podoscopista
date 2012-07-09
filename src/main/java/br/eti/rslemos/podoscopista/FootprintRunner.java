@@ -21,15 +21,21 @@
  ******************************************************************************/
 package br.eti.rslemos.podoscopista;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.List;
 
 import objectexplorer.MemoryMeasurer;
 import objectexplorer.ObjectGraphMeasurer;
 
+import com.google.common.collect.ArrayListMultimap;
+
 public class FootprintRunner {
 
 	private Class<?> clazz;
+	private ArrayListMultimap<Class<?>, Field> datapoints;
 	private ArrayList<Method> methods;
 	private Chart chart;
 
@@ -37,6 +43,7 @@ public class FootprintRunner {
 		try {
 			this.clazz = clazz;
 			
+			collectDataPoints();
 			collectAnnotatedMethods();
 	
 			chart = new Chart(clazz.getName(), methods.size());
@@ -48,9 +55,23 @@ public class FootprintRunner {
 			return chart;
 		} finally {
 			this.clazz = null;
+			datapoints = null;
 			methods = null;
 			chart = null;
 		}
+	}
+
+	private void collectDataPoints() {
+		datapoints = ArrayListMultimap.create();
+		
+		Field[] fields = clazz.getFields();
+		for (int i = 0; i < fields.length; i++) {
+			if (fields[i].getAnnotation(Datapoint.class) != null && Modifier.isStatic(fields[i].getModifiers())) {
+				datapoints.put(fields[i].getType(), fields[i]);
+			}
+		}
+		
+		datapoints.trimToSize();
 	}
 
 	private void collectAnnotatedMethods() {
@@ -58,9 +79,6 @@ public class FootprintRunner {
 		
 		for (Method method : clazz.getMethods()) {
 			if (method.getAnnotation(Footprint.class) != null) {
-				if (method.getParameterTypes().length > 0)
-					throw new IllegalArgumentException();
-				
 				methods.add(method);
 			}
 		}
@@ -69,16 +87,59 @@ public class FootprintRunner {
 	}
 
 	private void processMethod(Method method) {
-		Chart.Method chartMethod = chart.new Method(method.getName(), method.getAnnotation(Footprint.class).value());
+		ArrayList<Object[]> invocations = produceInvocations(method);
+		
+		Chart.Method chartMethod = chart.new Method(method.getName(), method.getAnnotation(Footprint.class).value(), invocations.size());
 
-		try {
-			Object thiz = clazz.newInstance();
-			Object result = method.invoke(thiz, new Object[0]);
+		for (Object[] invocation : invocations) {
+			Chart.Invocation chartInvocation = new Chart.Invocation();
+			chartMethod.invocations.add(chartInvocation);
+
+			try {
+				Object thiz = clazz.newInstance();
+				Object result = method.invoke(thiz, invocation);
+				
+				chartInvocation.parameters = invocation;
+				chartInvocation.footprint = ObjectGraphMeasurer.measure(result);
+				chartInvocation.size = MemoryMeasurer.measureBytes(result);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 			
-			chartMethod.footprint = ObjectGraphMeasurer.measure(result);
-			chartMethod.size = MemoryMeasurer.measureBytes(result);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
 		}
+	}
+
+	private ArrayList<Object[]> produceInvocations(Method method) {
+		// start with empty invocation
+		ArrayList<Object[]> invocations = new ArrayList<Object[]>(1);
+		invocations.add(new Object[0]);
+
+		// iterate over parameters, multiplying current invocations by number of available datapoints
+		for (Class<?> type : method.getParameterTypes()) {
+			List<Field> points = datapoints.get(type);
+			
+			if (points.isEmpty())
+				throw new IllegalArgumentException("No @datapoint found for type " + type);
+			
+			ArrayList<Object[]> newInvocations = new ArrayList<Object[]>(invocations.size() * points.size());
+			
+			for (Field point : points) {
+				try {
+					Object value = point.get(null);
+					for (Object[] invocation : invocations) {
+						Object[] newInvocation = new Object[invocation.length + 1];
+						System.arraycopy(invocation, 0, newInvocation, 0, invocation.length);
+						newInvocation[invocation.length] = value;
+						newInvocations.add(newInvocation);
+					}
+				} catch (Exception e) {
+					throw new RuntimeException(e);
+				}
+			}
+			
+			invocations = newInvocations;
+		}
+		
+		return invocations;
 	}
 }
