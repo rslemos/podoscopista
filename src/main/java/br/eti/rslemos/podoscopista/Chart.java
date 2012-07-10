@@ -39,11 +39,14 @@ public class Chart {
 	class Method {
 		public String name;
 		public String description;
+		public Class<?>[] parameterTypes;
 		public List<Invocation> invocations;
+		public Regression regression;
 		
-		public Method(String name, String description, int expectedInvocationCount) {
+		public Method(String name, String description, Class<?>[] parameterTypes, int expectedInvocationCount) {
 			this.name = name;
 			this.description = description;
+			this.parameterTypes = parameterTypes;
 			this.invocations = new ArrayList<Chart.Invocation>(expectedInvocationCount);
 			
 			Chart.this.methods.add(this);
@@ -55,5 +58,18 @@ public class Chart {
 		
 		public long size;
 		public Footprint footprint;
+	}
+	
+	static class Regression {
+		public double[] parameters;
+		public double[][] parametersVariance;
+		public double[] parametersStandardErrors;
+		public double[] residuals;
+		public double standardError;
+		public double errorVariance;
+		public double RSquared;
+		public double adjustedRSquared;
+		public double totalSumOfSquares;
+		public double residualSumOfSquares;
 	}
 }
