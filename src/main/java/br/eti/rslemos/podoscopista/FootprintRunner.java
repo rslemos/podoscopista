@@ -31,6 +31,8 @@ import java.util.List;
 import objectexplorer.MemoryMeasurer;
 import objectexplorer.ObjectGraphMeasurer;
 
+import org.codehaus.jackson.map.ObjectMapper;
+
 import com.google.common.collect.ArrayListMultimap;
 
 public class FootprintRunner {
@@ -52,6 +54,8 @@ public class FootprintRunner {
 			for (Method method : methods) {
 				processMethod(method);
 			}
+			
+			outputJSON();
 			
 			return chart;
 		} finally {
@@ -152,5 +156,14 @@ public class FootprintRunner {
 		}
 		
 		return invocations;
+	}
+	
+	private void outputJSON() {
+		try {
+			ObjectMapper mapper = new ObjectMapper();
+			mapper.writerWithDefaultPrettyPrinter().writeValue(System.out, chart);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 }
