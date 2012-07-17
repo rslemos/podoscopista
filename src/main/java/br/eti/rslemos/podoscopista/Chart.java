@@ -36,7 +36,7 @@ public class Chart {
 		methods = new ArrayList<Chart.Method>(expectedMethodCount);
 	}
 	
-	class Method {
+	public class Method {
 		public String name;
 		public String description;
 		public List<Invocation> invocations;
@@ -50,7 +50,7 @@ public class Chart {
 		}
 	}
 	
-	static class Invocation {
+	public static class Invocation {
 		public Object[] parameters;
 		
 		public long size;
