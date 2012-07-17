@@ -22,6 +22,7 @@
 package br.eti.rslemos.podoscopista;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -95,15 +96,23 @@ public class FootprintRunner {
 			Chart.Invocation chartInvocation = new Chart.Invocation();
 			chartMethod.invocations.add(chartInvocation);
 
+			chartInvocation.parameters = invocation;
 			try {
-				Object thiz = clazz.newInstance();
-				Object result = method.invoke(thiz, invocation);
-				
-				chartInvocation.parameters = invocation;
-				chartInvocation.footprint = ObjectGraphMeasurer.measure(result);
-				chartInvocation.size = MemoryMeasurer.measureBytes(result);
-			} catch (Exception e) {
-				throw new RuntimeException(e);
+				try {
+					Object thiz = clazz.newInstance();
+					Object result = method.invoke(thiz, invocation);
+					
+					chartInvocation.footprint = ObjectGraphMeasurer.measure(result);
+					chartInvocation.size = MemoryMeasurer.measureBytes(result);
+				} catch (InvocationTargetException e) {
+					throw e.getCause();
+				}
+			} catch (Throwable e) {
+				chartInvocation.size = -1;
+				chartInvocation.exception = new Chart.Exception();
+				chartInvocation.exception.className = e.getClass().getName();
+				chartInvocation.exception.message = e.getMessage();
+				chartInvocation.exception.stackTrace = e.getStackTrace();
 			}
 			
 		}

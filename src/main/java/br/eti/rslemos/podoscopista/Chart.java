@@ -55,5 +55,14 @@ public class Chart {
 		
 		public long size;
 		public Footprint footprint;
+
+		public Exception exception;
 	}
+	
+	public static class Exception {
+		public String className;
+		public String message;
+		public StackTraceElement[] stackTrace;
+	}
+
 }

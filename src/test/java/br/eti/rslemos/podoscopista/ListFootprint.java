@@ -63,6 +63,11 @@ public class ListFootprint {
 		return fill(new LinkedList(), elements);
 	}
 
+	@Footprint("throws Exception")
+	public Object throwsException() {
+		throw new RuntimeException();
+	}
+	
 	private static <T extends List<?>> T fill(T list, int elements) {
 		for (int i = 0; i < elements; i++) {
 			list.add(null);
