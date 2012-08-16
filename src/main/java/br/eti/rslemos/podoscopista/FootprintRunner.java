@@ -106,6 +106,8 @@ public class FootprintRunner {
 					chartInvocation.size = MemoryMeasurer.measureBytes(result);
 				} catch (InvocationTargetException e) {
 					throw e.getCause();
+				} finally {
+					System.gc();
 				}
 			} catch (Throwable e) {
 				chartInvocation.size = -1;

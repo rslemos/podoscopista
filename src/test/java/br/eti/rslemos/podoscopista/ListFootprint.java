@@ -68,6 +68,11 @@ public class ListFootprint {
 		throw new RuntimeException();
 	}
 	
+	@Footprint("exaust memory")
+	public Object exaustMemory() {
+		return new int[Integer.MAX_VALUE];
+	}
+	
 	private static <T extends List<?>> T fill(T list, int elements) {
 		for (int i = 0; i < elements; i++) {
 			list.add(null);
