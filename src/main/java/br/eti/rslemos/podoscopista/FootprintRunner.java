@@ -31,6 +31,8 @@ import java.util.List;
 import objectexplorer.MemoryMeasurer;
 import objectexplorer.ObjectGraphMeasurer;
 
+import br.eti.rslemos.podoscopista.data.Sample;
+
 import com.google.common.collect.ArrayListMultimap;
 
 public class FootprintRunner {
@@ -38,27 +40,33 @@ public class FootprintRunner {
 	private Class<?> clazz;
 	private ArrayListMultimap<Class<?>, Field> datapoints;
 	private ArrayList<Method> methods;
-	private Chart chart;
+	
+	private ArrayList<Sample> samples;
+	private Sample sampleTemplate;
 
-	public Chart run(Class<?> clazz) {
+	public List<Sample> run(Class<?> clazz) {
 		try {
 			this.clazz = clazz;
 			
 			collectDataPoints();
 			collectAnnotatedMethods();
 	
-			chart = new Chart(clazz.getName(), methods.size());
-	
+			samples = new ArrayList<Sample>();
+			sampleTemplate = new Sample();
+			sampleTemplate.className = clazz.getName();
+			
 			for (Method method : methods) {
 				processMethod(method);
 			}
 			
-			return chart;
+			samples.trimToSize();
+			return samples;
 		} finally {
 			this.clazz = null;
 			datapoints = null;
 			methods = null;
-			chart = null;
+			samples = null;
+			sampleTemplate = null;
 		}
 	}
 
@@ -90,31 +98,32 @@ public class FootprintRunner {
 	private void processMethod(Method method) {
 		ArrayList<Object[]> invocations = produceInvocations(method);
 		
-		Chart.Method chartMethod = chart.new Method(method.getName(), method.getAnnotation(Footprint.class).value(), invocations.size());
+		sampleTemplate.methodName = method.getName();
+		sampleTemplate.methodDescription = method.getAnnotation(Footprint.class).value();
 
 		for (Object[] invocation : invocations) {
-			Chart.Invocation chartInvocation = new Chart.Invocation();
-			chartMethod.invocations.add(chartInvocation);
+			Sample sample = sampleTemplate.clone();
+			samples.add(sample);
 
-			chartInvocation.parameters = invocation;
+			sample.parameters = invocation;
 			try {
 				try {
 					Object thiz = clazz.newInstance();
 					Object result = method.invoke(thiz, invocation);
 					
-					chartInvocation.footprint = ObjectGraphMeasurer.measure(result);
-					chartInvocation.size = MemoryMeasurer.measureBytes(result);
+					sample.footprint = ObjectGraphMeasurer.measure(result);
+					sample.size = MemoryMeasurer.measureBytes(result);
 				} catch (InvocationTargetException e) {
 					throw e.getCause();
 				} finally {
 					System.gc();
 				}
 			} catch (Throwable e) {
-				chartInvocation.size = -1;
-				chartInvocation.exception = new Chart.Exception();
-				chartInvocation.exception.className = e.getClass().getName();
-				chartInvocation.exception.message = e.getMessage();
-				chartInvocation.exception.stackTrace = e.getStackTrace();
+				sample.size = -1;
+				sample.exception = new Sample.Exception();
+				sample.exception.className = e.getClass().getName();
+				sample.exception.message = e.getMessage();
+				sample.exception.stackTrace = e.getStackTrace();
 			}
 			
 		}
